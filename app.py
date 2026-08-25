@@ -33,7 +33,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # app.py dan model_papaya.h5 berada dalam folder yang sama
 MODEL_PATH = os.path.join(
     BASE_DIR,
-    "model_papaya.h5"
+    "model.h5"
 )
 
 IMG_SIZE = (128, 128)
