@@ -32,7 +32,10 @@ BASE_DIR = os.path.dirname(
     os.path.abspath(__file__)
 )
 
-# Model berada satu folder dengan app.py
+# ======================================================
+# MODEL BERADA SATU FOLDER DENGAN APP.PY
+# ======================================================
+
 MODEL_PATH = os.path.join(
     BASE_DIR,
     "model_papaya.h5"
@@ -45,8 +48,8 @@ IMG_SIZE = (128, 128)
 # CLASS NAMES
 # ======================================================
 
-# URUTAN INI HARUS SAMA DENGAN CLASS_INDICES
-# PADA SAAT TRAINING DI GOOGLE COLAB
+# JANGAN DIUBAH jika ini adalah urutan kelas
+# yang digunakan ketika training di Google Colab.
 
 CLASS_NAMES = [
     "Defect",
@@ -56,10 +59,6 @@ CLASS_NAMES = [
 ]
 
 
-# ======================================================
-# EMOJI
-# ======================================================
-
 CLASS_EMOJI = {
     "Defect": "🟥",
     "Mature": "🟢",
@@ -67,10 +66,6 @@ CLASS_EMOJI = {
     "Unmature": "⚪"
 }
 
-
-# ======================================================
-# CARD
-# ======================================================
 
 CLASS_CARD = {
     "Defect": "danger",
@@ -87,6 +82,7 @@ CLASS_CARD = {
 INFO = {
 
     "Defect": {
+
         "deskripsi": (
             "Pepaya mengalami kerusakan pada kulit atau "
             "daging buah sehingga kualitasnya menurun."
@@ -111,6 +107,7 @@ INFO = {
 
 
     "Mature": {
+
         "deskripsi": (
             "Pepaya telah matang sempurna dan siap dikonsumsi."
         ),
@@ -134,6 +131,7 @@ INFO = {
 
 
     "Pre-mature": {
+
         "deskripsi": (
             "Pepaya mulai memasuki fase matang namun "
             "belum optimal."
@@ -152,12 +150,13 @@ INFO = {
         },
 
         "rekomendasi": (
-            "Simpan 2–3 hari sebelum dikonsumsi."
+            "Simpan 2-3 hari sebelum dikonsumsi."
         )
     },
 
 
     "Unmature": {
+
         "deskripsi": (
             "Pepaya masih mentah dan belum siap dikonsumsi."
         ),
@@ -190,7 +189,7 @@ st.markdown(
     <style>
 
     .main {
-        background-color: #f8fafc;
+        background: #f8fafc;
     }
 
     .result-card {
@@ -202,19 +201,19 @@ st.markdown(
     }
 
     .success {
-        background-color: #16a34a;
+        background: #16a34a;
     }
 
     .warning {
-        background-color: #ca8a04;
+        background: #ca8a04;
     }
 
     .info {
-        background-color: #0284c7;
+        background: #0284c7;
     }
 
     .danger {
-        background-color: #dc2626;
+        background: #dc2626;
     }
 
     .history-header {
@@ -232,11 +231,6 @@ st.markdown(
         border-bottom: 1px solid #e2e8f0;
     }
 
-    .footer {
-        text-align: center;
-        padding: 20px;
-    }
-
     </style>
     """,
     unsafe_allow_html=True
@@ -250,7 +244,6 @@ st.markdown(
 @st.cache_resource
 def load_model():
 
-    # Cek apakah file model tersedia
     if not os.path.exists(MODEL_PATH):
 
         st.error(
@@ -258,7 +251,7 @@ def load_model():
         )
 
         st.write(
-            "Path model yang dicari:"
+            "Path yang dicari:"
         )
 
         st.code(
@@ -266,8 +259,7 @@ def load_model():
         )
 
         st.warning(
-            "Pastikan file model_papaya.h5 berada "
-            "satu folder dengan app.py."
+            "Pastikan model_papaya.h5 berada satu folder dengan app.py."
         )
 
         st.stop()
@@ -287,17 +279,12 @@ def load_model():
             "❌ GAGAL MEMBUKA MODEL"
         )
 
-        st.write(
-            "Error:"
-        )
-
         st.code(
             str(e)
         )
 
         st.warning(
-            "Pastikan model_papaya.h5 merupakan "
-            "model TensorFlow/Keras yang valid."
+            "Pastikan model_papaya.h5 merupakan model TensorFlow/Keras yang valid."
         )
 
         st.stop()
@@ -326,29 +313,18 @@ if "last_label" not in st.session_state:
 
 def predict(model, image_file):
 
-    """
-    Melakukan prediksi menggunakan model CNN.
-
-    Preprocessing:
-    1. Decode gambar
-    2. Resize 128x128
-    3. Normalisasi /255
-    4. Tambahkan batch
-    5. Prediksi menggunakan model
-    """
-
-    # --------------------------------------------------
-    # Baca file
-    # --------------------------------------------------
+    # ==================================================
+    # BACA FILE GAMBAR
+    # ==================================================
 
     image_file.seek(0)
 
     img_bytes = image_file.read()
 
 
-    # --------------------------------------------------
-    # Decode
-    # --------------------------------------------------
+    # ==================================================
+    # DECODE GAMBAR
+    # ==================================================
 
     img_tensor = tf.image.decode_image(
         img_bytes,
@@ -357,9 +333,9 @@ def predict(model, image_file):
     )
 
 
-    # --------------------------------------------------
-    # Resize
-    # --------------------------------------------------
+    # ==================================================
+    # RESIZE
+    # ==================================================
 
     img_resized = tf.image.resize(
         img_tensor,
@@ -368,19 +344,31 @@ def predict(model, image_file):
     )
 
 
-    # --------------------------------------------------
-    # NORMALISASI
-    # --------------------------------------------------
+    # ==================================================
+    # KONVERSI KE FLOAT32
+    # ==================================================
 
     img_array = tf.cast(
         img_resized,
         tf.float32
-    ) / 255.0
+    )
 
 
-    # --------------------------------------------------
-    # Tambahkan batch
-    # --------------------------------------------------
+    # ==================================================
+    # NORMALISASI
+    #
+    # 0-255 -> 0-1
+    #
+    # Jika model training menggunakan rescale=1./255,
+    # preprocessing ini harus digunakan.
+    # ==================================================
+
+    img_array = img_array / 255.0
+
+
+    # ==================================================
+    # TAMBAHKAN DIMENSI BATCH
+    # ==================================================
 
     img_array = tf.expand_dims(
         img_array,
@@ -388,9 +376,9 @@ def predict(model, image_file):
     )
 
 
-    # --------------------------------------------------
-    # Prediksi
-    # --------------------------------------------------
+    # ==================================================
+    # PREDIKSI MODEL
+    # ==================================================
 
     prediction = model.predict(
         img_array,
@@ -398,60 +386,104 @@ def predict(model, image_file):
     )[0]
 
 
-    # --------------------------------------------------
-    # Pastikan model menghasilkan 4 kelas
-    # --------------------------------------------------
+    # ==================================================
+    # VALIDASI OUTPUT MODEL
+    # ==================================================
 
     if len(prediction) != len(CLASS_NAMES):
 
         raise ValueError(
-            "Jumlah output model tidak sesuai.\n\n"
-            f"Output model : {len(prediction)}\n"
-            f"Jumlah kelas : {len(CLASS_NAMES)}\n\n"
-            f"CLASS_NAMES : {CLASS_NAMES}"
+            f"""
+Jumlah output model tidak sesuai.
+
+Output model : {len(prediction)}
+Jumlah kelas : {len(CLASS_NAMES)}
+
+CLASS_NAMES:
+{CLASS_NAMES}
+"""
         )
 
 
-    # --------------------------------------------------
-    # Probabilitas
-    # --------------------------------------------------
-
-    probability = {}
-
-    for i, kelas in enumerate(CLASS_NAMES):
-
-        probability[kelas] = (
-            float(prediction[i]) * 100
-        )
-
-
-    # --------------------------------------------------
-    # Cari probabilitas terbesar
-    # --------------------------------------------------
+    # ==================================================
+    # PREDIKSI AWAL
+    # ==================================================
 
     predicted_index = int(
         np.argmax(prediction)
     )
-
 
     predicted_class = CLASS_NAMES[
         predicted_index
     ]
 
 
-    # --------------------------------------------------
-    # Confidence
-    # --------------------------------------------------
+    # ==================================================
+    # SMART DEFECT THRESHOLD
+    # ==================================================
 
-    confidence = (
-        float(prediction[predicted_index]) * 100
-    )
+    clean_probability = {}
+
+    pangkas_total = 0.0
+
+
+    for i, kelas in enumerate(CLASS_NAMES):
+
+        persen = (
+            float(prediction[i]) * 100
+        )
+
+
+        # ==================================================
+        # SENSOR KHUSUS DEFECT
+        #
+        # Jika Defect bukan kelas pemenang dan
+        # nilainya di bawah 40%, maka dianggap
+        # sebagai noise.
+        # ==================================================
+
+        if (
+            kelas == "Defect"
+            and predicted_class != "Defect"
+            and persen < 40.0
+        ):
+
+            pangkas_total += persen
+
+            clean_probability[
+                kelas
+            ] = 0.0
+
+        else:
+
+            clean_probability[
+                kelas
+            ] = persen
+
+
+    # ==================================================
+    # MASUKKAN NILAI DEFECT YANG DIPANGKAS
+    # KE KELAS PEMENANG
+    # ==================================================
+
+    clean_probability[
+        predicted_class
+    ] += pangkas_total
+
+
+    # ==================================================
+    # CONFIDENCE
+    # ==================================================
+
+    confidence = clean_probability[
+        predicted_class
+    ]
 
 
     return (
         predicted_class,
         confidence,
-        probability
+        clean_probability
     )
 
 
@@ -472,11 +504,11 @@ st.divider()
 
 
 # ======================================================
-# UPLOAD GAMBAR
+# UPLOAD
 # ======================================================
 
 uploaded = st.file_uploader(
-    "📤 Upload Gambar Pepaya",
+    "Upload Gambar Pepaya",
     type=[
         "jpg",
         "jpeg",
@@ -486,7 +518,7 @@ uploaded = st.file_uploader(
 
 
 # ======================================================
-# PROSES UPLOAD
+# PROSES GAMBAR
 # ======================================================
 
 if uploaded is not None:
@@ -503,7 +535,7 @@ if uploaded is not None:
     with col1:
 
         st.subheader(
-            "🖼️ Gambar"
+            "Gambar"
         )
 
         st.image(
@@ -513,13 +545,13 @@ if uploaded is not None:
 
 
     # ==================================================
-    # HASIL PREDIKSI
+    # HASIL
     # ==================================================
 
     with col2:
 
         st.subheader(
-            "🔎 Hasil Prediksi"
+            "Hasil Prediksi"
         )
 
 
@@ -532,13 +564,9 @@ if uploaded is not None:
                 "Sedang melakukan prediksi..."
             ):
 
-                # Simpan gambar untuk history
                 uploaded.seek(0)
 
-                raw_image_data = (
-                    uploaded.read()
-                )
-
+                raw_image_data = uploaded.read()
 
                 uploaded.seek(0)
 
@@ -554,11 +582,11 @@ if uploaded is not None:
                         uploaded
                     )
 
+
                 except Exception as e:
 
                     st.error(
-                        "❌ Terjadi kesalahan "
-                        "saat melakukan prediksi."
+                        "❌ Terjadi kesalahan saat prediksi."
                     )
 
                     st.code(
@@ -568,16 +596,16 @@ if uploaded is not None:
                     st.stop()
 
 
-            # --------------------------------------------------
-            # Simpan label terakhir
-            # --------------------------------------------------
+            # ==================================================
+            # SIMPAN LABEL
+            # ==================================================
 
             st.session_state.last_label = label
 
 
-            # --------------------------------------------------
-            # Simpan history
-            # --------------------------------------------------
+            # ==================================================
+            # SIMPAN HISTORY
+            # ==================================================
 
             st.session_state.history.append(
                 {
@@ -655,18 +683,11 @@ if uploaded is not None:
                 )
 
 
-                # Pastikan progress berada 0-100
-                progress_value = max(
-                    0.0,
-                    min(
-                        float(persen) / 100,
-                        1.0
-                    )
-                )
-
-
                 st.progress(
-                    progress_value
+                    min(
+                        int(persen),
+                        100
+                    )
                 )
 
 
@@ -679,7 +700,10 @@ if uploaded is not None:
 # INFORMASI PEPAYA
 # ======================================================
 
-if st.session_state.last_label is not None:
+if (
+    st.session_state.last_label
+    is not None
+):
 
     st.divider()
 
@@ -697,15 +721,15 @@ if st.session_state.last_label is not None:
 
     tab1, tab2, tab3 = st.tabs(
         [
-            "📖 Deskripsi",
-            "🥗 Nutrisi",
-            "💡 Rekomendasi"
+            "Deskripsi",
+            "Nutrisi",
+            "Rekomendasi"
         ]
     )
 
 
     # ==================================================
-    # TAB DESKRIPSI
+    # DESKRIPSI
     # ==================================================
 
     with tab1:
@@ -714,14 +738,11 @@ if st.session_state.last_label is not None:
             info["deskripsi"]
         )
 
-
         st.write("")
-
 
         st.subheader(
             "Manfaat"
         )
-
 
         for item in info["manfaat"]:
 
@@ -731,7 +752,7 @@ if st.session_state.last_label is not None:
 
 
     # ==================================================
-    # TAB NUTRISI
+    # NUTRISI
     # ==================================================
 
     with tab2:
@@ -739,7 +760,6 @@ if st.session_state.last_label is not None:
         st.subheader(
             "Kandungan Nutrisi"
         )
-
 
         for key, value in (
             info["nutrisi"].items()
@@ -751,7 +771,7 @@ if st.session_state.last_label is not None:
 
 
     # ==================================================
-    # TAB REKOMENDASI
+    # REKOMENDASI
     # ==================================================
 
     with tab3:
@@ -824,7 +844,7 @@ if len(
 
 
     # ==================================================
-    # LOOP HISTORY
+    # HISTORY
     # ==================================================
 
     for item in reversed(
@@ -836,6 +856,7 @@ if len(
             or "image" not in item
             or "label" not in item
         ):
+
             continue
 
 
@@ -846,9 +867,9 @@ if len(
         )
 
 
-        # --------------------------------------------------
-        # Gambar
-        # --------------------------------------------------
+        # ==================================================
+        # GAMBAR
+        # ==================================================
 
         with r_col1:
 
@@ -858,9 +879,9 @@ if len(
             )
 
 
-        # --------------------------------------------------
-        # Label
-        # --------------------------------------------------
+        # ==================================================
+        # LABEL
+        # ==================================================
 
         with r_col2:
 
@@ -868,12 +889,13 @@ if len(
                 f"""
                 <div style="
                     text-align:center;
-                    padding-top:25px;
-                    font-weight:bold;
+                    margin-top:25px;
                 ">
 
-                    {CLASS_EMOJI[item["label"]]}
-                    {item["label"]}
+                    <h5>
+                        {CLASS_EMOJI[item["label"]]}
+                        {item["label"]}
+                    </h5>
 
                 </div>
                 """,
@@ -881,9 +903,9 @@ if len(
             )
 
 
-        # --------------------------------------------------
-        # Confidence
-        # --------------------------------------------------
+        # ==================================================
+        # CONFIDENCE
+        # ==================================================
 
         with r_col3:
 
@@ -891,11 +913,12 @@ if len(
                 f"""
                 <div style="
                     text-align:center;
-                    padding-top:25px;
-                    font-weight:bold;
+                    margin-top:25px;
                 ">
 
-                    {item["confidence"]}
+                    <h5>
+                        {item["confidence"]}
+                    </h5>
 
                 </div>
                 """,
@@ -903,9 +926,9 @@ if len(
             )
 
 
-        # --------------------------------------------------
-        # Waktu
-        # --------------------------------------------------
+        # ==================================================
+        # WAKTU
+        # ==================================================
 
         with r_col4:
 
@@ -913,11 +936,12 @@ if len(
                 f"""
                 <div style="
                     text-align:center;
-                    padding-top:25px;
-                    font-weight:bold;
+                    margin-top:25px;
                 ">
 
-                    {item["time"]}
+                    <h5>
+                        {item["time"]}
+                    </h5>
 
                 </div>
                 """,
@@ -940,7 +964,6 @@ with st.sidebar:
     st.title(
         "🍈 Papaya Classifier"
     )
-
 
     st.write("")
 
@@ -971,35 +994,8 @@ with st.sidebar:
     st.write("---")
 
 
-    # --------------------------------------------------
-    # INFORMASI MODEL
-    # --------------------------------------------------
-
-    st.write(
-        "### Model"
-    )
-
-    st.write(
-        "TensorFlow / Keras"
-    )
-
-    st.write(
-        "Format: .h5"
-    )
-
-    st.write(
-        "Input: 128 × 128"
-    )
-
-    st.write("---")
-
-
-    # --------------------------------------------------
-    # RESET
-    # --------------------------------------------------
-
     if st.button(
-        "♻️ Reset Riwayat",
+        "♻ Reset Riwayat",
         use_container_width=True
     ):
 
@@ -1030,7 +1026,7 @@ klasifikasi CNN.
 ✅ Tidak memerlukan internet
 
 ✅ Seluruh jawaban berasal dari basis pengetahuan
-yang telah disiapkan.
+yang telah disiapkan
 """
 )
 
@@ -1097,11 +1093,18 @@ if st.button(
     )
 
 
-    label = (
+    if (
         st.session_state.last_label
-        if st.session_state.last_label is not None
-        else None
-    )
+        is not None
+    ):
+
+        label = (
+            st.session_state.last_label
+        )
+
+    else:
+
+        label = None
 
 
     jawaban = ""
@@ -1119,22 +1122,23 @@ if st.button(
 
         if label is None:
 
-            jawaban = (
-                "Silakan lakukan klasifikasi terlebih dahulu "
-                "dengan mengunggah gambar pepaya."
-            )
+            jawaban = """
+Silakan lakukan klasifikasi terlebih dahulu
+dengan mengunggah gambar pepaya.
+"""
 
 
         elif label == "Mature":
 
             jawaban = """
-🟢 Berdasarkan hasil klasifikasi CNN,
+🥭 Berdasarkan hasil klasifikasi CNN,
 pepaya Anda termasuk Mature.
 
 Pepaya sudah matang sempurna dan siap dikonsumsi.
 
-Jika belum ingin dimakan hari ini, simpan
-di lemari pendingin agar kualitasnya tetap terjaga.
+Jika belum ingin dimakan hari ini,
+simpan di lemari pendingin agar kualitasnya
+tetap terjaga.
 """
 
 
@@ -1144,9 +1148,10 @@ di lemari pendingin agar kualitasnya tetap terjaga.
 🟡 Berdasarkan hasil klasifikasi CNN,
 pepaya termasuk Pre-mature.
 
-Pepaya hampir matang. Sebaiknya diperam
-1–3 hari lagi pada suhu ruang hingga rasa
-menjadi lebih manis.
+Pepaya hampir matang.
+
+Sebaiknya diperam 1–3 hari lagi pada suhu ruang
+hingga rasa menjadi lebih manis.
 """
 
 
@@ -1189,11 +1194,10 @@ Jika iya, sebaiknya tidak dikonsumsi.
 
 • Pepaya mentah disimpan pada suhu ruang.
 
-• Pepaya matang dapat disimpan di lemari pendingin
-  agar bertahan lebih lama.
+• Pepaya matang dapat disimpan di lemari
+  pendingin agar bertahan lebih lama.
 
-• Jangan mencuci pepaya sebelum disimpan karena
-  dapat mempercepat pembusukan.
+• Jangan mencuci pepaya sebelum disimpan.
 
 • Hindari sinar matahari langsung.
 """
@@ -1213,11 +1217,10 @@ Jika iya, sebaiknya tidak dikonsumsi.
 
 • Simpan pepaya pada suhu ruang.
 
-• Letakkan bersama buah pisang atau apel karena
-  menghasilkan gas etilen yang membantu proses
-  pematangan.
+• Letakkan bersama buah pisang atau apel.
 
-• Hindari memasukkan ke kulkas sebelum matang.
+• Hindari memasukkan pepaya ke kulkas
+  sebelum matang.
 """
 
 
@@ -1233,12 +1236,14 @@ Jika iya, sebaiknya tidak dikonsumsi.
         jawaban = """
 ⏳ Umur Simpan Pepaya
 
-• Suhu ruang: sekitar 2–3 hari setelah matang.
+• Suhu ruang:
+  sekitar 2–3 hari setelah matang.
 
-• Dalam kulkas: sekitar 5–7 hari.
+• Dalam kulkas:
+  sekitar 5–7 hari.
 
-Lama penyimpanan dapat berbeda tergantung
-kondisi buah.
+Lama penyimpanan dapat berbeda
+tergantung kondisi buah.
 """
 
 
@@ -1274,14 +1279,15 @@ kondisi buah.
     ):
 
         jawaban = """
-⚫ Bercak hitam dapat disebabkan oleh benturan,
-memar, atau proses pembusukan.
+⚫ Bercak hitam dapat disebabkan oleh
+benturan, memar, atau proses pembusukan.
 
-Apabila bercak hanya sedikit, bagian tersebut
-dapat dipotong.
+Apabila bercak hanya sedikit,
+bagian tersebut dapat dipotong.
 
-Namun jika disertai bau tidak sedap dan berlendir,
-sebaiknya pepaya tidak dikonsumsi.
+Namun jika disertai bau tidak sedap
+dan berlendir, sebaiknya pepaya
+tidak dikonsumsi.
 """
 
 
@@ -1295,11 +1301,12 @@ sebaiknya pepaya tidak dikonsumsi.
     ):
 
         jawaban = """
-🤰 Pepaya matang umumnya aman dikonsumsi ibu hamil
+🤰 Pepaya matang umumnya aman dikonsumsi
 dalam jumlah wajar.
 
-Namun untuk kondisi kehamilan tertentu,
-sebaiknya konsultasikan dengan tenaga kesehatan.
+Namun pepaya yang masih mentah sebaiknya
+dihindari karena mengandung getah/lateks
+yang lebih tinggi.
 """
 
 
@@ -1314,8 +1321,8 @@ sebaiknya konsultasikan dengan tenaga kesehatan.
 
         jawaban = """
 👶 Pepaya matang dapat diberikan sebagai MPASI
-setelah bayi berusia sekitar 6 bulan sesuai
-anjuran tenaga kesehatan.
+setelah bayi berusia sekitar 6 bulan
+sesuai anjuran tenaga kesehatan.
 """
 
 
@@ -1326,8 +1333,8 @@ anjuran tenaga kesehatan.
     elif "pencernaan" in tanya:
 
         jawaban = """
-💚 Pepaya mengandung serat dan enzim papain yang
-dapat membantu menjaga kesehatan pencernaan.
+💚 Pepaya mengandung serat dan enzim papain
+yang dapat membantu mendukung sistem pencernaan.
 """
 
 
@@ -1360,10 +1367,6 @@ Silakan tanyakan hal seperti:
 """
 
 
-    # ==================================================
-    # JAWABAN
-    # ==================================================
-
     st.success(
         "🤖 Jawaban Papaya AI"
     )
@@ -1379,21 +1382,24 @@ Silakan tanyakan hal seperti:
 
 st.divider()
 
+# TIDAK menggunakan HTML.
+# Supaya Streamlit tidak menampilkan tag HTML
+# sebagai teks pada versi tertentu.
+
 st.markdown(
-    """
-    <div class="footer">
+    "### 🍈 Sistem Klasifikasi Tingkat Kematangan Pepaya"
+)
 
-        <h3>🍈 Sistem Klasifikasi Tingkat Kematangan Pepaya</h3>
+st.write(
+    "Convolutional Neural Network (CNN)"
+)
 
-        <p>Convolutional Neural Network (CNN)</p>
+st.write(
+    "TensorFlow • Streamlit"
+)
 
-        <p>TensorFlow • Streamlit</p>
+st.write("")
 
-        <br>
-
-        <strong>Developed by Muhammad Ghifari</strong>
-
-    </div>
-    """,
-    unsafe_allow_html=True
+st.write(
+    "**Developed by Muhammad Ghifari**"
 )
