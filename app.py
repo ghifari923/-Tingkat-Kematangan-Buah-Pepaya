@@ -36,8 +36,6 @@ MODEL_PATH = os.path.join(
     "model_papaya.h5"
 )
 
-IMG_SIZE = (128, 128)
-
 
 # ======================================================
 # NAMA KELAS
