@@ -35,7 +35,7 @@ BASE_DIR = os.path.dirname(
 # MODEL BERADA SATU FOLDER DENGAN app.py
 MODEL_PATH = os.path.join(
     BASE_DIR,
-    "model_papaya.keras"
+    "model_papaya.h5"
 )
 
 IMG_SIZE = (128, 128)
