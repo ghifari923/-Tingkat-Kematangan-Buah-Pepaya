@@ -1,19 +1,9 @@
-# """
-
+"""
+==========================================================
 APP.PY
 Sistem Klasifikasi Tingkat Kematangan Pepaya
 CNN + TensorFlow + Streamlit
-
-MODEL:
-app.py
-model_papaya.h5
-
-CATATAN:
-Preprocessing gambar dipertahankan seperti kode lama.
-Tidak menggunakan /255.0 agar hasil prediksi tetap konsisten
-dengan aplikasi sebelumnya.
-===========================
-
+==========================================================
 """
 
 import os
@@ -22,1475 +12,1253 @@ import numpy as np
 import streamlit as st
 import tensorflow as tf
 
+
 # ======================================================
-
-# KONFIGURASI
-
+# KONFIGURASI STREAMLIT
 # ======================================================
 
 st.set_page_config(
-page_title="Klasifikasi Tingkat Kematangan Pepaya",
-page_icon="🍈",
-layout="wide"
+    page_title="Klasifikasi Tingkat Kematangan Pepaya",
+    page_icon="🍈",
+    layout="wide"
 )
 
-# ======================================================
 
+# ======================================================
 # PATH MODEL
-
 # ======================================================
 
-BASE_DIR = os.path.dirname(
-os.path.abspath(**file**)
-)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# app.py dan model_papaya.h5 berada dalam
-
-# folder yang sama.
-
+# app.py dan model_papaya.h5 berada dalam folder yang sama
 MODEL_PATH = os.path.join(
-BASE_DIR,
-"model_papaya.h5"
+    BASE_DIR,
+    "model_papaya.h5"
 )
 
 IMG_SIZE = (128, 128)
 
+
 # ======================================================
-
 # CLASS NAMES
-
 # ======================================================
 
 CLASS_NAMES = [
-"Defect",
-"Mature",
-"Pre-mature",
-"Unmature"
+    "Defect",
+    "Mature",
+    "Pre-mature",
+    "Unmature"
 ]
 
+
 CLASS_EMOJI = {
-"Defect": "🟥",
-"Mature": "🟢",
-"Pre-mature": "🟡",
-"Unmature": "⚪"
+    "Defect": "🟥",
+    "Mature": "🟢",
+    "Pre-mature": "🟡",
+    "Unmature": "⚪"
 }
+
 
 CLASS_CARD = {
-"Defect": "danger",
-"Mature": "success",
-"Pre-mature": "warning",
-"Unmature": "info"
+    "Defect": "danger",
+    "Mature": "success",
+    "Pre-mature": "warning",
+    "Unmature": "info"
 }
 
+
 # ======================================================
-
 # INFORMASI PEPAYA
-
 # ======================================================
 
 INFO = {
 
-```
-"Defect": {
+    "Defect": {
+        "deskripsi": (
+            "Pepaya mengalami kerusakan pada kulit atau daging buah "
+            "sehingga kualitasnya menurun."
+        ),
 
-    "deskripsi": (
-        "Pepaya mengalami kerusakan pada kulit atau daging "
-        "buah sehingga kualitasnya menurun."
-    ),
+        "manfaat": [
+            "Tidak disarankan dikonsumsi.",
+            "Dapat dijadikan kompos.",
+            "Pisahkan dari buah sehat."
+        ],
 
-    "manfaat": [
-        "Tidak disarankan dikonsumsi.",
-        "Dapat dijadikan kompos.",
-        "Pisahkan dari buah sehat."
-    ],
+        "nutrisi": {
+            "Vitamin C": "Menurun",
+            "Vitamin A": "Menurun",
+            "Serat": "Masih ada"
+        },
 
-    "nutrisi": {
-        "Vitamin C": "Menurun",
-        "Vitamin A": "Menurun",
-        "Serat": "Masih ada"
+        "rekomendasi": (
+            "Sebaiknya tidak dijual sebagai buah konsumsi."
+        )
     },
 
-    "rekomendasi": (
-        "Sebaiknya tidak dijual sebagai buah konsumsi."
-    )
-},
 
+    "Mature": {
+        "deskripsi": (
+            "Pepaya telah matang sempurna dan siap dikonsumsi."
+        ),
 
-"Mature": {
+        "manfaat": [
+            "Rasa manis maksimal.",
+            "Siap dipasarkan.",
+            "Tekstur lembut."
+        ],
 
-    "deskripsi": (
-        "Pepaya telah matang sempurna dan siap dikonsumsi."
-    ),
+        "nutrisi": {
+            "Vitamin C": "Tinggi",
+            "Vitamin A": "Tinggi",
+            "Serat": "Tinggi"
+        },
 
-    "manfaat": [
-        "Rasa manis maksimal.",
-        "Siap dipasarkan.",
-        "Tekstur lembut."
-    ],
-
-    "nutrisi": {
-        "Vitamin C": "Tinggi",
-        "Vitamin A": "Tinggi",
-        "Serat": "Tinggi"
+        "rekomendasi": (
+            "Cocok untuk dikonsumsi langsung maupun dijual."
+        )
     },
 
-    "rekomendasi": (
-        "Cocok untuk dikonsumsi langsung maupun dijual."
-    )
-},
 
+    "Pre-mature": {
+        "deskripsi": (
+            "Pepaya mulai memasuki fase matang namun belum optimal."
+        ),
 
-"Pre-mature": {
+        "manfaat": [
+            "Masih bisa diperam.",
+            "Masih layak dipasarkan.",
+            "Rasa mulai manis."
+        ],
 
-    "deskripsi": (
-        "Pepaya mulai memasuki fase matang namun belum optimal."
-    ),
+        "nutrisi": {
+            "Vitamin C": "Sedang",
+            "Vitamin A": "Sedang",
+            "Serat": "Tinggi"
+        },
 
-    "manfaat": [
-        "Masih bisa diperam.",
-        "Masih layak dipasarkan.",
-        "Rasa mulai manis."
-    ],
-
-    "nutrisi": {
-        "Vitamin C": "Sedang",
-        "Vitamin A": "Sedang",
-        "Serat": "Tinggi"
+        "rekomendasi": (
+            "Simpan 2-3 hari sebelum dikonsumsi."
+        )
     },
 
-    "rekomendasi": (
-        "Simpan 2-3 hari sebelum dikonsumsi."
-    )
-},
 
+    "Unmature": {
+        "deskripsi": (
+            "Pepaya masih mentah dan belum siap dikonsumsi."
+        ),
 
-"Unmature": {
+        "manfaat": [
+            "Bisa dijadikan sayur.",
+            "Masih perlu pemeraman.",
+            "Belum memiliki rasa manis."
+        ],
 
-    "deskripsi": (
-        "Pepaya masih mentah dan belum siap dikonsumsi."
-    ),
+        "nutrisi": {
+            "Vitamin C": "Sedang",
+            "Vitamin A": "Rendah",
+            "Serat": "Tinggi"
+        },
 
-    "manfaat": [
-        "Bisa dijadikan sayur.",
-        "Masih perlu pemeraman.",
-        "Belum memiliki rasa manis."
-    ],
-
-    "nutrisi": {
-        "Vitamin C": "Sedang",
-        "Vitamin A": "Rendah",
-        "Serat": "Tinggi"
-    },
-
-    "rekomendasi": (
-        "Peram terlebih dahulu hingga matang."
-    )
+        "rekomendasi": (
+            "Peram terlebih dahulu hingga matang."
+        )
+    }
 }
-```
 
-}
 
 # ======================================================
-
 # CSS STYLING
-
 # ======================================================
 
 st.markdown(
-""" <style>
+    """
+    <style>
 
-```
-.main {
-    background: #f8fafc;
-}
+    .main {
+        background: #f8fafc;
+    }
 
-.result-card {
-    padding: 25px;
-    border-radius: 18px;
-    color: white;
-    text-align: center;
-    margin-top: 15px;
-}
+    .result-card {
+        padding: 25px;
+        border-radius: 18px;
+        color: white;
+        text-align: center;
+        margin-top: 15px;
+    }
 
-.success {
-    background: #16a34a;
-}
+    .success {
+        background: #16a34a;
+    }
 
-.warning {
-    background: #ca8a04;
-}
+    .warning {
+        background: #ca8a04;
+    }
 
-.info {
-    background: #0284c7;
-}
+    .info {
+        background: #0284c7;
+    }
 
-.danger {
-    background: #dc2626;
-}
+    .danger {
+        background: #dc2626;
+    }
 
-.history-header {
-    background-color: #f1f5f9;
-    padding: 10px;
-    border-radius: 8px;
-    text-align: center;
-    font-weight: bold;
-    color: #334155;
-    margin-bottom: 15px;
-}
+    .history-header {
+        background-color: #f1f5f9;
+        padding: 10px;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: bold;
+        color: #334155;
+        margin-bottom: 15px;
+    }
 
-.history-row {
-    padding: 10px 0;
-    border-bottom: 1px solid #e2e8f0;
-}
+    .history-row {
+        padding: 10px 0;
+        border-bottom: 1px solid #e2e8f0;
+    }
 
-</style>
-""",
-unsafe_allow_html=True
-```
-
+    </style>
+    """,
+    unsafe_allow_html=True
 )
 
+
 # ======================================================
-
-# LOAD MODEL CNN
-
+# LOAD MODEL
 # ======================================================
 
 @st.cache_resource
 def load_model():
 
-```
-# --------------------------------------------------
-# CEK MODEL
-# --------------------------------------------------
+    # Cek apakah model ada
+    if not os.path.exists(MODEL_PATH):
 
-if not os.path.isfile(MODEL_PATH):
+        st.error(
+            f"""
+            ❌ MODEL TIDAK DITEMUKAN
 
-    st.error(
-        f"""
-        ❌ Model tidak ditemukan.
+            Path yang dicari:
 
-        Path yang dicari:
+            {MODEL_PATH}
 
-        `{MODEL_PATH}`
+            Pastikan struktur folder:
 
-        Pastikan struktur folder kamu seperti:
+            tingkat-kematangan-buah-pepaya/
+            ├── app.py
+            └── model_papaya.h5
+            """
+        )
 
-        Tingkat-Kematangan-Buah-Pepaya/
-        ├── app.py
-        ├── model_papaya.h5
-        └── requirements.txt
-        """
-    )
+        st.stop()
 
-    st.stop()
+    try:
 
+        model = tf.keras.models.load_model(
+            MODEL_PATH,
+            compile=False
+        )
 
-# --------------------------------------------------
-# CEK UKURAN FILE
-# --------------------------------------------------
+        return model
 
-file_size = os.path.getsize(
-    MODEL_PATH
-)
+    except Exception as e:
 
+        st.error(
+            f"""
+            ❌ GAGAL MEMBUKA MODEL
 
-if file_size == 0:
+            Error:
 
-    st.error(
-        """
-        ❌ File model kosong.
+            {e}
 
-        `model_papaya.h5` memiliki ukuran 0 byte.
+            Pastikan file model_papaya.h5 merupakan
+            model TensorFlow/Keras yang valid.
+            """
+        )
 
-        Silakan gunakan file model yang asli.
-        """
-    )
+        st.stop()
 
-    st.stop()
-
-
-# --------------------------------------------------
-# LOAD MODEL
-# --------------------------------------------------
-
-try:
-
-    model = tf.keras.models.load_model(
-        MODEL_PATH,
-        compile=False
-    )
-
-    return model
-
-
-except Exception as e:
-
-    st.error(
-        f"""
-        ❌ Gagal membuka model.
-
-        File ditemukan:
-
-        `{MODEL_PATH}`
-
-        Ukuran file:
-
-        `{file_size / (1024 * 1024):.2f} MB`
-
-        Error:
-
-        `{e}`
-        """
-    )
-
-    st.stop()
-```
 
 model = load_model()
 
+
 # ======================================================
-
 # SESSION STATE
-
 # ======================================================
 
 if "history" not in st.session_state:
+    st.session_state.history = []
 
-```
-st.session_state.history = []
-```
 
 if "last_label" not in st.session_state:
+    st.session_state.last_label = None
 
-```
-st.session_state.last_label = None
-```
 
 # ======================================================
-
 # FUNGSI PREDIKSI
-
 # ======================================================
 
 def predict(model, image_file):
 
-```
-# --------------------------------------------------
-# BACA GAMBAR
-# --------------------------------------------------
+    # Membaca file gambar
+    img_bytes = image_file.read()
 
-img_bytes = image_file.read()
-
-
-# --------------------------------------------------
-# DECODE GAMBAR
-# --------------------------------------------------
-
-img_tensor = tf.image.decode_image(
-    img_bytes,
-    channels=3,
-    expand_animations=False
-)
-
-
-# --------------------------------------------------
-# RESIZE
-# --------------------------------------------------
-
-img_resized = tf.image.resize(
-    img_tensor,
-    IMG_SIZE,
-    method="bilinear"
-)
-
-
-# --------------------------------------------------
-# PREPROCESSING
-#
-# DIPERTAHANKAN SEPERTI KODE LAMA
-#
-# TIDAK MENGGUNAKAN /255.0
-# --------------------------------------------------
-
-img_array = tf.expand_dims(
-    img_resized,
-    axis=0
-)
-
-
-# --------------------------------------------------
-# PREDIKSI CNN
-# --------------------------------------------------
-
-prediction = model.predict(
-    img_array,
-    verbose=0
-)[0]
-
-
-# --------------------------------------------------
-# CEK OUTPUT MODEL
-# --------------------------------------------------
-
-if len(prediction) != len(CLASS_NAMES):
-
-    raise ValueError(
-        f"""
-        Jumlah output model tidak sesuai.
-
-        Output model:
-        {len(prediction)}
-
-        Jumlah kelas:
-        {len(CLASS_NAMES)}
-
-        Kelas:
-        {CLASS_NAMES}
-        """
+    # Decode gambar
+    img_tensor = tf.image.decode_image(
+        img_bytes,
+        channels=3,
+        expand_animations=False
     )
 
-
-# --------------------------------------------------
-# KELAS DENGAN PROBABILITAS TERBESAR
-# --------------------------------------------------
-
-predicted_index = np.argmax(
-    prediction
-)
-
-
-predicted_class = CLASS_NAMES[
-    predicted_index
-]
-
-
-# ==================================================
-# SMART DEFECT THRESHOLDING
-# ==================================================
-
-clean_probability = {}
-
-pangkas_total = 0.0
-
-
-for i, kelas in enumerate(
-    CLASS_NAMES
-):
-
-    persen = (
-        float(prediction[i])
-        * 100
+    # Resize
+    img_resized = tf.image.resize(
+        img_tensor,
+        IMG_SIZE,
+        method="bilinear"
     )
 
+    # Normalisasi
+    img_array = tf.cast(
+        img_resized,
+        tf.float32
+    ) / 255.0
 
-    # ------------------------------------------------
-    # FILTER DEFECT
-    #
-    # Hanya Defect yang memiliki nilai
-    # kurang dari 40% dan bukan pemenang.
-    # ------------------------------------------------
+    # Tambahkan batch dimension
+    img_array = tf.expand_dims(
+        img_array,
+        axis=0
+    )
 
-    if (
-        kelas == "Defect"
-        and predicted_class != "Defect"
-        and persen < 40.0
-    ):
+    # Prediksi
+    prediction = model.predict(
+        img_array,
+        verbose=0
+    )[0]
 
-        pangkas_total += persen
+    # Pastikan jumlah output model sesuai kelas
+    if len(prediction) != len(CLASS_NAMES):
 
-        clean_probability[
-            kelas
-        ] = 0.0
+        raise ValueError(
+            f"""
+            Jumlah output model adalah {len(prediction)},
+            sedangkan CLASS_NAMES memiliki {len(CLASS_NAMES)} kelas.
 
+            CLASS_NAMES:
+            {CLASS_NAMES}
+            """
+        )
 
-    else:
+    # ==================================================
+    # PREDIKSI UTAMA
+    # ==================================================
 
-        # Mature
-        # Pre-mature
-        # Unmature
-        #
-        # Tetap menggunakan nilai asli.
+    predicted_index = np.argmax(prediction)
 
-        clean_probability[
-            kelas
-        ] = persen
-
-
-# --------------------------------------------------
-# MASUKKAN NILAI DEFECT YANG DIPANGKAS
-# KE KELAS PEMENANG
-# --------------------------------------------------
-
-clean_probability[
-    predicted_class
-] += pangkas_total
+    predicted_class = CLASS_NAMES[predicted_index]
 
 
-# --------------------------------------------------
-# CONFIDENCE AKHIR
-# --------------------------------------------------
+    # ==================================================
+    # PROBABILITAS
+    # ==================================================
 
-confidence = clean_probability[
-    predicted_class
-]
+    clean_probability = {}
+
+    pangkas_total = 0.0
 
 
-return (
-    predicted_class,
-    confidence,
-    clean_probability
-)
-```
+    for i, kelas in enumerate(CLASS_NAMES):
+
+        persen = float(prediction[i]) * 100
+
+
+        # Filter khusus Defect
+        if (
+            kelas == "Defect"
+            and predicted_class != "Defect"
+            and persen < 40.0
+        ):
+
+            pangkas_total += persen
+
+            clean_probability[kelas] = 0.0
+
+        else:
+
+            clean_probability[kelas] = persen
+
+
+    # Masukkan nilai Defect yang dipangkas
+    # ke kelas prediksi utama
+    clean_probability[predicted_class] += pangkas_total
+
+
+    # Confidence akhir
+    confidence = clean_probability[predicted_class]
+
+
+    return (
+        predicted_class,
+        confidence,
+        clean_probability
+    )
+
 
 # ======================================================
-
 # HEADER
-
 # ======================================================
 
 st.title(
-"🍈 Klasifikasi Tingkat Kematangan Pepaya"
+    "🍈 Klasifikasi Tingkat Kematangan Pepaya"
 )
 
 st.write(
-"Upload gambar pepaya kemudian tekan tombol "
-"**Analisis Sekarang**."
+    "Upload gambar pepaya kemudian tekan tombol "
+    "**Analisis Sekarang**."
 )
 
 st.divider()
 
+
 # ======================================================
-
-# UPLOAD GAMBAR
-
+# UPLOAD
 # ======================================================
 
 uploaded = st.file_uploader(
-"Upload Gambar Pepaya",
-type=[
-"jpg",
-"jpeg",
-"png"
-]
+    "Upload Gambar Pepaya",
+    type=[
+        "jpg",
+        "jpeg",
+        "png"
+    ]
 )
 
+
 # ======================================================
-
 # PROSES GAMBAR
-
 # ======================================================
 
 if uploaded is not None:
 
-```
-col1, col2 = st.columns(
-    [1, 1]
-)
-
-
-# ==================================================
-# GAMBAR
-# ==================================================
-
-with col1:
-
-    st.subheader(
-        "Gambar"
+    col1, col2 = st.columns(
+        [1, 1]
     )
 
 
-    st.image(
-        uploaded,
-        use_container_width=True
-    )
+    # ==================================================
+    # GAMBAR
+    # ==================================================
+
+    with col1:
+
+        st.subheader("Gambar")
+
+        st.image(
+            uploaded,
+            use_container_width=True
+        )
 
 
-# ==================================================
-# HASIL PREDIKSI
-# ==================================================
+    # ==================================================
+    # HASIL
+    # ==================================================
 
-with col2:
+    with col2:
 
-    st.subheader(
-        "Hasil Prediksi"
-    )
+        st.subheader(
+            "Hasil Prediksi"
+        )
 
 
-    if st.button(
-        "🔍 Analisis Sekarang",
-        use_container_width=True
-    ):
+        if st.button(
+            "🔍 Analisis Sekarang",
+            use_container_width=True
+        ):
 
-        try:
+            try:
 
-            with st.spinner(
-                "Sedang melakukan prediksi..."
-            ):
+                with st.spinner(
+                    "Sedang melakukan prediksi..."
+                ):
 
-                # Simpan gambar asli
-                uploaded.seek(0)
+                    uploaded.seek(0)
 
-                raw_image_data = (
-                    uploaded.read()
+                    raw_image_data = uploaded.read()
+
+                    uploaded.seek(0)
+
+                    label, confidence, probability = predict(
+                        model,
+                        uploaded
+                    )
+
+
+                # Simpan label
+                st.session_state.last_label = label
+
+
+                # Simpan history
+                st.session_state.history.append(
+                    {
+                        "image": raw_image_data,
+
+                        "label": label,
+
+                        "confidence": (
+                            f"{confidence:.2f}%"
+                        ),
+
+                        "time": (
+                            datetime.datetime.now().strftime(
+                                "%d-%m-%Y %H:%M:%S"
+                            )
+                        )
+                    }
                 )
 
 
-                # Kembalikan posisi file
-                uploaded.seek(0)
+                # ==================================================
+                # RESULT CARD
+                # ==================================================
 
+                st.markdown(
+                    f"""
+                    <div class="result-card {CLASS_CARD[label]}">
 
-                # Prediksi
-                (
-                    label,
-                    confidence,
-                    probability
-                ) = predict(
-                    model,
-                    uploaded
+                        <h2>
+                            {CLASS_EMOJI[label]} {label}
+                        </h2>
+
+                        <h3>
+                            Confidence
+                        </h3>
+
+                        <h1>
+                            {confidence:.2f}%
+                        </h1>
+
+                    </div>
+                    """,
+                    unsafe_allow_html=True
                 )
 
 
-            # --------------------------------------------------
-            # SIMPAN HASIL TERAKHIR
-            # --------------------------------------------------
-
-            st.session_state.last_label = (
-                label
-            )
+                st.write("")
 
 
-            # --------------------------------------------------
-            # SIMPAN HISTORY
-            # --------------------------------------------------
+                # ==================================================
+                # PROBABILITAS
+                # ==================================================
 
-            st.session_state.history.append(
-                {
-                    "image": raw_image_data,
+                st.subheader(
+                    "📊 Probabilitas"
+                )
 
-                    "label": label,
 
-                    "confidence": (
-                        f"{confidence:.2f}%"
-                    ),
+                probability = dict(
+                    sorted(
+                        probability.items(),
+                        key=lambda x: x[1],
+                        reverse=True
+                    )
+                )
 
-                    "time": (
-                        datetime.datetime.now()
-                        .strftime(
-                            "%d-%m-%Y %H:%M:%S"
+
+                for kelas, persen in probability.items():
+
+                    st.write(
+                        f"**{kelas}**"
+                    )
+
+
+                    st.progress(
+                        min(
+                            int(persen),
+                            100
                         )
                     )
-                }
+
+
+                    st.caption(
+                        f"{persen:.2f}%"
+                    )
+
+
+            except Exception as e:
+
+                st.error(
+                    f"""
+                    ❌ Terjadi kesalahan saat melakukan prediksi.
+
+                    Error:
+
+                    {e}
+                    """
+                )
+
+
+# ======================================================
+# INFORMASI PEPAYA
+# ======================================================
+
+if st.session_state.last_label is not None:
+
+    st.divider()
+
+    label = st.session_state.last_label
+
+    info = INFO[label]
+
+
+    st.header(
+        "📋 Informasi Pepaya"
+    )
+
+
+    tab1, tab2, tab3 = st.tabs(
+        [
+            "Deskripsi",
+            "Nutrisi",
+            "Rekomendasi"
+        ]
+    )
+
+
+    # ==================================================
+    # DESKRIPSI
+    # ==================================================
+
+    with tab1:
+
+        st.markdown(
+            info["deskripsi"]
+        )
+
+        st.write("")
+
+        st.subheader(
+            "Manfaat"
+        )
+
+
+        for item in info["manfaat"]:
+
+            st.write(
+                f"✅ {item}"
             )
 
 
-            # ==================================================
-            # RESULT CARD
-            # ==================================================
+    # ==================================================
+    # NUTRISI
+    # ==================================================
+
+    with tab2:
+
+        st.subheader(
+            "Kandungan Nutrisi"
+        )
+
+
+        for key, value in info["nutrisi"].items():
+
+            st.write(
+                f"**{key} :** {value}"
+            )
+
+
+    # ==================================================
+    # REKOMENDASI
+    # ==================================================
+
+    with tab3:
+
+        st.success(
+            info["rekomendasi"]
+        )
+
+
+# ======================================================
+# RIWAYAT PREDIKSI
+# ======================================================
+
+if len(st.session_state.history) > 0:
+
+    st.divider()
+
+    st.header(
+        "📑 Riwayat Prediksi"
+    )
+
+
+    h_col1, h_col2, h_col3, h_col4 = st.columns(
+        [1.5, 2, 2, 2.5]
+    )
+
+
+    with h_col1:
+
+        st.markdown(
+            '<div class="history-header">Gambar</div>',
+            unsafe_allow_html=True
+        )
+
+
+    with h_col2:
+
+        st.markdown(
+            '<div class="history-header">Label</div>',
+            unsafe_allow_html=True
+        )
+
+
+    with h_col3:
+
+        st.markdown(
+            '<div class="history-header">Confidence</div>',
+            unsafe_allow_html=True
+        )
+
+
+    with h_col4:
+
+        st.markdown(
+            '<div class="history-header">Waktu Analisis</div>',
+            unsafe_allow_html=True
+        )
+
+
+    # ==================================================
+    # LOOP HISTORY
+    # ==================================================
+
+    for item in reversed(
+        st.session_state.history
+    ):
+
+        if (
+            not isinstance(item, dict)
+            or "image" not in item
+            or "label" not in item
+        ):
+            continue
+
+
+        r_col1, r_col2, r_col3, r_col4 = st.columns(
+            [1.5, 2, 2, 2.5]
+        )
+
+
+        # Gambar
+        with r_col1:
+
+            st.image(
+                item["image"],
+                width=90
+            )
+
+
+        # Label
+        with r_col2:
 
             st.markdown(
                 f"""
-                <div class="result-card {CLASS_CARD[label]}">
+                <h5 style="
+                    text-align:center;
+                    margin-top:25px;
+                ">
 
-                    <h2>
-                        {CLASS_EMOJI[label]} {label}
-                    </h2>
+                    {CLASS_EMOJI[item["label"]]}
+                    {item["label"]}
 
-                    <h3>
-                        Confidence
-                    </h3>
-
-                    <h1>
-                        {confidence:.2f}%
-                    </h1>
-
-                </div>
+                </h5>
                 """,
                 unsafe_allow_html=True
             )
 
 
-            st.write("")
+        # Confidence
+        with r_col3:
 
-
-            # ==================================================
-            # PROBABILITAS
-            # ==================================================
-
-            st.subheader(
-                "📊 Probabilitas"
-            )
-
-
-            probability = dict(
-                sorted(
-                    probability.items(),
-                    key=lambda x: x[1],
-                    reverse=True
-                )
-            )
-
-
-            for kelas, persen in (
-                probability.items()
-            ):
-
-                st.write(
-                    f"**{CLASS_EMOJI[kelas]} {kelas}**"
-                )
-
-
-                st.progress(
-                    min(
-                        int(persen),
-                        100
-                    )
-                )
-
-
-                st.caption(
-                    f"{persen:.2f}%"
-                )
-
-
-        except Exception as e:
-
-            st.error(
+            st.markdown(
                 f"""
-                ❌ Terjadi kesalahan saat prediksi.
+                <h5 style="
+                    text-align:center;
+                    margin-top:25px;
+                ">
 
-                Error:
+                    {item["confidence"]}
 
-                `{e}`
-                """
+                </h5>
+                """,
+                unsafe_allow_html=True
             )
-```
 
-# ======================================================
 
-# INFORMASI BERDASARKAN HASIL
+        # Waktu
+        with r_col4:
 
-# ======================================================
+            st.markdown(
+                f"""
+                <h5 style="
+                    text-align:center;
+                    margin-top:25px;
+                ">
 
-if st.session_state.last_label is not None:
+                    {item["time"]}
 
-```
-st.divider()
+                </h5>
+                """,
+                unsafe_allow_html=True
+            )
 
-
-label = (
-    st.session_state.last_label
-)
-
-
-info = INFO[label]
-
-
-st.header(
-    "📋 Informasi Pepaya"
-)
-
-
-tab1, tab2, tab3 = st.tabs(
-    [
-        "Deskripsi",
-        "Nutrisi",
-        "Rekomendasi"
-    ]
-)
-
-
-# ==================================================
-# TAB DESKRIPSI
-# ==================================================
-
-with tab1:
-
-    st.markdown(
-        info["deskripsi"]
-    )
-
-
-    st.write("")
-
-
-    st.subheader(
-        "Manfaat"
-    )
-
-
-    for item in info["manfaat"]:
-
-        st.write(
-            f"✅ {item}"
-        )
-
-
-# ==================================================
-# TAB NUTRISI
-# ==================================================
-
-with tab2:
-
-    st.subheader(
-        "Kandungan Nutrisi"
-    )
-
-
-    for key, value in (
-        info["nutrisi"].items()
-    ):
-
-        st.write(
-            f"**{key} :** {value}"
-        )
-
-
-# ==================================================
-# TAB REKOMENDASI
-# ==================================================
-
-with tab3:
-
-    st.success(
-        info["rekomendasi"]
-    )
-```
-
-# ======================================================
-
-# RIWAYAT PREDIKSI
-
-# ======================================================
-
-if len(
-st.session_state.history
-) > 0:
-
-```
-st.divider()
-
-
-st.header(
-    "📑 Riwayat Prediksi"
-)
-
-
-h_col1, h_col2, h_col3, h_col4 = (
-    st.columns(
-        [1.5, 2, 2, 2.5]
-    )
-)
-
-
-with h_col1:
-
-    st.markdown(
-        '<div class="history-header">Gambar</div>',
-        unsafe_allow_html=True
-    )
-
-
-with h_col2:
-
-    st.markdown(
-        '<div class="history-header">Label</div>',
-        unsafe_allow_html=True
-    )
-
-
-with h_col3:
-
-    st.markdown(
-        '<div class="history-header">Confidence</div>',
-        unsafe_allow_html=True
-    )
-
-
-with h_col4:
-
-    st.markdown(
-        '<div class="history-header">Waktu Analisis</div>',
-        unsafe_allow_html=True
-    )
-
-
-# ==================================================
-# TAMPILKAN HISTORY
-# ==================================================
-
-for item in reversed(
-    st.session_state.history
-):
-
-    if (
-        not isinstance(item, dict)
-        or "image" not in item
-        or "label" not in item
-    ):
-
-        continue
-
-
-    r_col1, r_col2, r_col3, r_col4 = (
-        st.columns(
-            [1.5, 2, 2, 2.5]
-        )
-    )
-
-
-    # ------------------------------------------------
-    # GAMBAR
-    # ------------------------------------------------
-
-    with r_col1:
-
-        st.image(
-            item["image"],
-            width=90
-        )
-
-
-    # ------------------------------------------------
-    # LABEL
-    # ------------------------------------------------
-
-    with r_col2:
 
         st.markdown(
-            f"""
-            <h5 style='text-align:center;
-                       margin-top:25px;'>
-
-                {CLASS_EMOJI[item["label"]]}
-                {item["label"]}
-
-            </h5>
-            """,
+            '<div class="history-row"></div>',
             unsafe_allow_html=True
         )
 
 
-    # ------------------------------------------------
-    # CONFIDENCE
-    # ------------------------------------------------
-
-    with r_col3:
-
-        st.markdown(
-            f"""
-            <h5 style='text-align:center;
-                       margin-top:25px;'>
-
-                {item["confidence"]}
-
-            </h5>
-            """,
-            unsafe_allow_html=True
-        )
-
-
-    # ------------------------------------------------
-    # WAKTU
-    # ------------------------------------------------
-
-    with r_col4:
-
-        st.markdown(
-            f"""
-            <h5 style='text-align:center;
-                       margin-top:25px;'>
-
-                {item["time"]}
-
-            </h5>
-            """,
-            unsafe_allow_html=True
-        )
-
-
-    st.markdown(
-        '<div class="history-row"></div>',
-        unsafe_allow_html=True
-    )
-```
-
 # ======================================================
-
 # SIDEBAR
-
 # ======================================================
 
 with st.sidebar:
 
-```
-st.title(
-    "🍈 Papaya Classifier"
-)
-
-
-st.write("")
-
-
-# Jumlah prediksi
-st.metric(
-    "Jumlah Prediksi",
-    len(
-        st.session_state.history
+    st.title(
+        "🍈 Papaya Classifier"
     )
-)
+
+    st.write("")
 
 
-st.write("---")
+    st.metric(
+        "Jumlah Prediksi",
+        len(
+            st.session_state.history
+        )
+    )
 
 
-# ==================================================
-# KELAS MODEL
-# ==================================================
+    st.write("---")
 
-st.write(
-    "### Kelas Model"
-)
-
-
-for kelas in CLASS_NAMES:
 
     st.write(
-        f"{CLASS_EMOJI[kelas]} {kelas}"
+        "### Kelas Model"
     )
 
 
-st.write("---")
+    for kelas in CLASS_NAMES:
+
+        st.write(
+            f"{CLASS_EMOJI[kelas]} {kelas}"
+        )
 
 
-# ==================================================
-# RESET HISTORY
-# ==================================================
+    st.write("---")
 
-if st.button(
-    "♻ Reset Riwayat",
-    use_container_width=True
-):
 
-    st.session_state.history = []
+    if st.button(
+        "♻ Reset Riwayat",
+        use_container_width=True
+    ):
 
-    st.session_state.last_label = None
+        st.session_state.history = []
 
-    st.rerun()
-```
+        st.session_state.last_label = None
+
+        st.rerun()
+
 
 # ======================================================
-
 # PAPAYA AI ASSISTANT
-
 # ======================================================
 
 st.divider()
 
 st.header(
-"🤖 Papaya AI Assistant"
+    "🤖 Papaya AI Assistant"
 )
+
 
 st.info(
+    """
+Asisten virtual berbasis Knowledge Base yang memberikan informasi mengenai
+buah pepaya berdasarkan hasil klasifikasi CNN.
+
+✅ Tidak memerlukan internet.
+
+✅ Seluruh jawaban berasal dari basis pengetahuan yang telah disiapkan.
 """
-Asisten virtual berbasis Knowledge Base yang memberikan informasi
-mengenai buah pepaya berdasarkan hasil klasifikasi CNN.
-
-```
-✅ Tidak memerlukan internet
-
-✅ Seluruh jawaban berasal dari basis pengetahuan yang telah disiapkan
-"""
-```
-
 )
 
+
 # ======================================================
-
 # CONTOH PERTANYAAN
-
 # ======================================================
 
 contoh = [
 
-```
-"Bagaimana cara menyimpan pepaya?",
+    "Bagaimana cara menyimpan pepaya?",
 
-"Bagaimana mempercepat pematangan pepaya?",
+    "Bagaimana mempercepat pematangan pepaya?",
 
-"Berapa lama pepaya matang dapat disimpan?",
+    "Berapa lama pepaya matang dapat disimpan?",
 
-"Bagaimana memilih pepaya yang bagus?",
+    "Bagaimana memilih pepaya yang bagus?",
 
-"Bolehkah pepaya dimakan ibu hamil?",
+    "Bolehkah pepaya dimakan ibu hamil?",
 
-"Apakah pepaya boleh diberikan kepada bayi?",
+    "Apakah pepaya boleh diberikan kepada bayi?",
 
-"Kenapa muncul bercak hitam pada pepaya?",
+    "Kenapa muncul bercak hitam pada pepaya?",
 
-"Apakah pepaya saya sudah siap dimakan?"
-```
+    "Apakah pepaya saya sudah siap dimakan?"
 
 ]
 
+
 with st.expander(
-"💡 Contoh Pertanyaan"
+    "💡 Contoh Pertanyaan"
 ):
 
-```
-for c in contoh:
+    for c in contoh:
 
-    st.write(
-        "•",
-        c
-    )
-```
+        st.write(
+            "•",
+            c
+        )
+
 
 # ======================================================
-
 # INPUT PERTANYAAN
-
 # ======================================================
 
 pertanyaan = st.text_input(
-"Silakan tuliskan pertanyaan Anda:"
+    "Silakan tuliskan pertanyaan Anda:"
 )
 
+
 # ======================================================
-
 # TANYA AI
-
 # ======================================================
 
 if st.button(
-"🤖 Tanya AI",
-use_container_width=True
+    "🤖 Tanya AI",
+    use_container_width=True
 ):
 
-```
-tanya = (
-    pertanyaan
-    .lower()
-    .strip()
-)
-
-
-# Ambil hasil klasifikasi terakhir
-if (
-    st.session_state.last_label
-    is not None
-):
-
-    label = (
-        st.session_state.last_label
+    tanya = (
+        pertanyaan
+        .lower()
+        .strip()
     )
 
-else:
 
-    label = None
+    if st.session_state.last_label is not None:
+
+        label = st.session_state.last_label
+
+    else:
+
+        label = None
 
 
-jawaban = ""
+    jawaban = ""
 
 
-# ==================================================
-# HASIL PREDIKSI
-# ==================================================
+    # ==================================================
+    # HASIL PREDIKSI
+    # ==================================================
 
-if (
-    "siap dimakan" in tanya
-    or "hasil" in tanya
-    or "prediksi" in tanya
-):
+    if (
+        "siap dimakan" in tanya
+        or "hasil" in tanya
+        or "prediksi" in tanya
+    ):
 
-    if label is None:
+        if label is None:
+
+            jawaban = """
+Silakan lakukan klasifikasi terlebih dahulu dengan
+mengunggah gambar pepaya.
+"""
+
+
+        elif label == "Mature":
+
+            jawaban = """
+🥭 Berdasarkan hasil klasifikasi CNN, pepaya Anda
+termasuk **Mature**.
+
+Pepaya sudah matang sempurna dan siap dikonsumsi.
+
+Jika belum ingin dimakan hari ini, simpan di lemari
+pendingin agar kualitasnya tetap terjaga.
+"""
+
+
+        elif label == "Pre-mature":
+
+            jawaban = """
+🟡 Berdasarkan hasil klasifikasi CNN, pepaya termasuk
+**Pre-mature**.
+
+Pepaya hampir matang. Sebaiknya diperam 1–3 hari lagi
+pada suhu ruang hingga rasa menjadi lebih manis.
+"""
+
+
+        elif label == "Unmature":
+
+            jawaban = """
+⚪ Berdasarkan hasil klasifikasi CNN, pepaya termasuk
+**Unmature**.
+
+Pepaya masih mentah sehingga belum disarankan untuk
+dikonsumsi.
+
+Simpan pada suhu ruang hingga matang.
+"""
+
+
+        else:
+
+            jawaban = """
+🔴 Berdasarkan hasil klasifikasi CNN, pepaya termasuk
+**Defect**.
+
+Buah mengalami kerusakan.
+
+Periksa apakah terdapat jamur, bau tidak sedap,
+atau tekstur berlendir.
+
+Jika iya, sebaiknya tidak dikonsumsi.
+"""
+
+
+    # ==================================================
+    # PENYIMPANAN
+    # ==================================================
+
+    elif "menyimpan" in tanya:
 
         jawaban = """
-        Silakan lakukan klasifikasi terlebih dahulu
-        dengan mengunggah gambar pepaya.
-        """
+📦 **Cara Penyimpanan Pepaya**
+
+• Pepaya mentah disimpan pada suhu ruang.
+
+• Pepaya matang dapat disimpan di lemari pendingin
+  agar bertahan lebih lama.
+
+• Jangan mencuci pepaya sebelum disimpan karena dapat
+  mempercepat pembusukan.
+
+• Hindari sinar matahari langsung.
+"""
 
 
-    elif label == "Mature":
+    # ==================================================
+    # MEMPERCEPAT PEMATANGAN
+    # ==================================================
 
-        jawaban = """
-        🥭 Berdasarkan hasil klasifikasi CNN, pepaya Anda
-        termasuk **Mature**.
-
-        Pepaya sudah matang sempurna dan siap dikonsumsi.
-
-        Jika belum ingin dimakan hari ini, simpan di lemari
-        pendingin agar kualitasnya tetap terjaga.
-        """
-
-
-    elif label == "Pre-mature":
-
-        jawaban = """
-        🟡 Berdasarkan hasil klasifikasi CNN, pepaya termasuk
-        **Pre-mature**.
-
-        Pepaya hampir matang. Sebaiknya diperam 1–3 hari lagi
-        pada suhu ruang hingga rasa menjadi lebih manis.
-        """
-
-
-    elif label == "Unmature":
+    elif (
+        "mempercepat" in tanya
+        or "peram" in tanya
+    ):
 
         jawaban = """
-        ⚪ Berdasarkan hasil klasifikasi CNN, pepaya termasuk
-        **Unmature**.
+🍌 **Untuk mempercepat pematangan:**
 
-        Pepaya masih mentah sehingga belum disarankan
-        untuk dikonsumsi.
+• Simpan pepaya pada suhu ruang.
 
-        Simpan pada suhu ruang hingga matang.
-        """
+• Letakkan bersama buah pisang atau apel karena
+  menghasilkan gas etilen yang membantu proses pematangan.
 
+• Hindari memasukkan ke kulkas sebelum matang.
+"""
+
+
+    # ==================================================
+    # MASA SIMPAN
+    # ==================================================
+
+    elif (
+        "berapa lama" in tanya
+        or "tahan" in tanya
+    ):
+
+        jawaban = """
+⏳ **Umur Simpan Pepaya**
+
+• Suhu ruang: sekitar 2–3 hari setelah matang.
+
+• Dalam kulkas: sekitar 5–7 hari.
+
+Lama penyimpanan dapat berbeda tergantung kondisi buah.
+"""
+
+
+    # ==================================================
+    # MEMILIH PEPAYA
+    # ==================================================
+
+    elif (
+        "pilih" in tanya
+        or "bagus" in tanya
+    ):
+
+        jawaban = """
+🥭 **Tips Memilih Pepaya**
+
+• Kulit berwarna kuning merata.
+
+• Tidak terdapat luka besar.
+
+• Tidak berbau busuk.
+
+• Tekstur sedikit lunak saat ditekan.
+"""
+
+
+    # ==================================================
+    # BERCAK HITAM
+    # ==================================================
+
+    elif (
+        "bercak" in tanya
+        or "hitam" in tanya
+    ):
+
+        jawaban = """
+⚫ Bercak hitam dapat disebabkan oleh benturan,
+memar, atau proses pembusukan.
+
+Apabila bercak hanya sedikit, bagian tersebut
+dapat dipotong.
+
+Namun jika disertai bau tidak sedap dan berlendir,
+sebaiknya pepaya tidak dikonsumsi.
+"""
+
+
+    # ==================================================
+    # IBU HAMIL
+    # ==================================================
+
+    elif (
+        "ibu hamil" in tanya
+        or "hamil" in tanya
+    ):
+
+        jawaban = """
+🤰 Pepaya matang umumnya aman dikonsumsi ibu hamil
+dalam jumlah wajar.
+
+Namun pepaya yang masih mentah sebaiknya dihindari
+karena mengandung getah atau lateks yang cukup tinggi.
+"""
+
+
+    # ==================================================
+    # BAYI
+    # ==================================================
+
+    elif (
+        "bayi" in tanya
+        or "mpasi" in tanya
+    ):
+
+        jawaban = """
+👶 Pepaya matang dapat diberikan sebagai MPASI
+setelah bayi berusia sekitar 6 bulan sesuai anjuran
+tenaga kesehatan.
+"""
+
+
+    # ==================================================
+    # PENCERNAAN
+    # ==================================================
+
+    elif "pencernaan" in tanya:
+
+        jawaban = """
+💚 Pepaya mengandung serat dan enzim papain yang
+membantu melancarkan sistem pencernaan serta
+mengurangi risiko sembelit.
+"""
+
+
+    # ==================================================
+    # DEFAULT
+    # ==================================================
 
     else:
 
         jawaban = """
-        🔴 Berdasarkan hasil klasifikasi CNN, pepaya termasuk
-        **Defect**.
+Maaf, saya belum memahami pertanyaan tersebut.
 
-        Buah mengalami kerusakan.
+Silakan tanyakan hal seperti:
 
-        Periksa apakah terdapat jamur, bau tidak sedap,
-        atau tekstur berlendir.
+• Bagaimana cara menyimpan pepaya?
 
-        Jika iya, sebaiknya tidak dikonsumsi.
-        """
+• Bagaimana mempercepat pematangan?
 
+• Berapa lama pepaya dapat disimpan?
 
-# ==================================================
-# PENYIMPANAN
-# ==================================================
+• Bagaimana memilih pepaya yang bagus?
 
-elif "menyimpan" in tanya:
+• Apakah pepaya saya sudah siap dimakan?
 
-    jawaban = """
-    📦 **Cara Penyimpanan Pepaya**
+• Kenapa muncul bercak hitam?
 
-    • Pepaya mentah disimpan pada suhu ruang.
+• Apakah boleh dimakan ibu hamil?
 
-    • Pepaya matang dapat disimpan di lemari pendingin
-      agar bertahan lebih lama.
+• Apakah boleh diberikan kepada bayi?
+"""
 
-    • Jangan mencuci pepaya sebelum disimpan karena dapat
-      mempercepat pembusukan.
 
-    • Hindari sinar matahari langsung.
-    """
+    # ==================================================
+    # TAMPILKAN JAWABAN
+    # ==================================================
 
+    st.success(
+        "🤖 Jawaban Papaya AI"
+    )
 
-# ==================================================
-# MEMPERCEPAT PEMATANGAN
-# ==================================================
+    st.write(
+        jawaban
+    )
 
-elif (
-    "mempercepat" in tanya
-    or "peram" in tanya
-):
-
-    jawaban = """
-    🍌 **Untuk mempercepat pematangan:**
-
-    • Simpan pepaya pada suhu ruang.
-
-    • Letakkan bersama buah pisang atau apel karena
-      menghasilkan gas etilen yang membantu proses pematangan.
-
-    • Hindari memasukkan ke kulkas sebelum matang.
-    """
-
-
-# ==================================================
-# MASA SIMPAN
-# ==================================================
-
-elif (
-    "berapa lama" in tanya
-    or "tahan" in tanya
-):
-
-    jawaban = """
-    ⏳ **Umur Simpan Pepaya**
-
-    • Suhu ruang: sekitar 2–3 hari setelah matang.
-
-    • Dalam kulkas: sekitar 5–7 hari.
-
-    Lama penyimpanan dapat berbeda tergantung kondisi buah.
-    """
-
-
-# ==================================================
-# MEMILIH PEPAYA
-# ==================================================
-
-elif (
-    "pilih" in tanya
-    or "bagus" in tanya
-):
-
-    jawaban = """
-    🥭 **Tips Memilih Pepaya**
-
-    • Kulit berwarna kuning merata.
-
-    • Tidak terdapat luka besar.
-
-    • Tidak berbau busuk.
-
-    • Tekstur sedikit lunak saat ditekan.
-    """
-
-
-# ==================================================
-# BERCAK HITAM
-# ==================================================
-
-elif (
-    "bercak" in tanya
-    or "hitam" in tanya
-):
-
-    jawaban = """
-    ⚫ Bercak hitam dapat disebabkan oleh benturan,
-    memar, atau proses pembusukan.
-
-    Apabila bercak hanya sedikit, bagian tersebut
-    dapat dipotong.
-
-    Namun jika disertai bau tidak sedap dan berlendir,
-    sebaiknya pepaya tidak dikonsumsi.
-    """
-
-
-# ==================================================
-# IBU HAMIL
-# ==================================================
-
-elif (
-    "ibu hamil" in tanya
-    or "hamil" in tanya
-):
-
-    jawaban = """
-    🤰 Pepaya matang umumnya aman dikonsumsi ibu hamil
-    dalam jumlah wajar.
-
-    Namun pepaya yang masih mentah sebaiknya dihindari
-    karena mengandung getah (lateks) yang cukup tinggi.
-    """
-
-
-# ==================================================
-# BAYI
-# ==================================================
-
-elif (
-    "bayi" in tanya
-    or "mpasi" in tanya
-):
-
-    jawaban = """
-    👶 Pepaya matang dapat diberikan sebagai MPASI
-    setelah bayi berusia sekitar 6 bulan sesuai
-    anjuran tenaga kesehatan.
-    """
-
-
-# ==================================================
-# PENCERNAAN
-# ==================================================
-
-elif "pencernaan" in tanya:
-
-    jawaban = """
-    💚 Pepaya mengandung serat dan enzim papain yang
-    membantu mendukung sistem pencernaan serta
-    mengurangi risiko sembelit.
-    """
-
-
-# ==================================================
-# DEFAULT
-# ==================================================
-
-else:
-
-    jawaban = """
-    Maaf, saya belum memahami pertanyaan tersebut.
-
-    Silakan tanyakan hal seperti:
-
-    • Bagaimana cara menyimpan pepaya?
-
-    • Bagaimana mempercepat pematangan?
-
-    • Berapa lama pepaya dapat disimpan?
-
-    • Bagaimana memilih pepaya yang bagus?
-
-    • Apakah pepaya saya sudah siap dimakan?
-
-    • Kenapa muncul bercak hitam?
-
-    • Apakah boleh dimakan ibu hamil?
-
-    • Apakah boleh diberikan kepada bayi?
-    """
-
-
-# ==================================================
-# TAMPILKAN JAWABAN
-# ==================================================
-
-st.success(
-    "🤖 Jawaban Papaya AI"
-)
-
-
-st.write(
-    jawaban
-)
-```
 
 # ======================================================
-
 # FOOTER
-
 # ======================================================
 
 st.divider()
 
+
 st.markdown(
-""" <div style="text-align:center">
+    """
+    <div style="text-align:center">
 
-```
-    <h3>
-        🍈 Sistem Klasifikasi Tingkat Kematangan Pepaya
-    </h3>
+        <h3>
+            🍈 Sistem Klasifikasi Tingkat Kematangan Pepaya
+        </h3>
 
-    <p>
-        Convolutional Neural Network (CNN)
-    </p>
+        <p>
+            Convolutional Neural Network (CNN)
+        </p>
 
-    <p>
-        TensorFlow • Streamlit
-    </p>
+        <p>
+            TensorFlow • Streamlit
+        </p>
 
-    <br>
+        <br>
 
-    <b>
-        Developed by Muhammad Ghifari
-    </b>
+        <b>
+            Developed by Muhammad Ghifari
+        </b>
 
-</div>
-""",
-unsafe_allow_html=True
-```
-
+    </div>
+    """,
+    unsafe_allow_html=True
 )
