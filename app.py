@@ -32,7 +32,7 @@ MODEL_PATH = os.path.join(
     BASE_DIR,
     "papaya-ml",
     "model",
-    "model_papaya.h5"
+    "model_papaya.keras"
 )
 
 IMG_SIZE = (128, 128)
